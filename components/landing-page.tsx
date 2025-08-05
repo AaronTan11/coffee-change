@@ -1,10 +1,21 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
+import { useAccount } from 'wagmi'
 import { Wallet, TrendingUp, Shield, Zap, DollarSign, BarChart3 } from 'lucide-react'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
 
 export function LandingPage() {
+  const router = useRouter()
+  const { isConnected } = useAccount()
+
+  useEffect(() => {
+    if (isConnected) {
+      router.push('/dashboard')
+    }
+  }, [isConnected, router])
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
       {/* Header */}
@@ -59,7 +70,7 @@ export function LandingPage() {
 
                       return (
                         <div className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-6 py-3 rounded-lg font-semibold">
-                          ✅ Wallet Connected - Ready to earn!
+                          ✅ Wallet Connected - Redirecting to dashboard...
                         </div>
                       )
                     })()}
@@ -229,7 +240,7 @@ export function LandingPage() {
 
                     return (
                       <div className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-6 py-3 rounded-lg font-semibold inline-block">
-                        ✅ Connected! Your passive income journey starts now.
+                        ✅ Connected! Redirecting to your dashboard...
                       </div>
                     )
                   })()}
