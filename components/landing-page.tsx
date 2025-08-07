@@ -2,22 +2,21 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { usePrivy } from '@privy-io/react-auth'
+import { usePrivy, useLogin } from '@privy-io/react-auth'
 import { Wallet, TrendingUp, Shield, Zap, DollarSign, BarChart3 } from 'lucide-react'
-import { USDCTransaction } from './usdc-transaction'
-import { AutomatedUSDCTest } from './automated-usdc-test'
+
 
 export function LandingPage() {
   const router = useRouter()
-  const { login, logout, authenticated, user, ready } = usePrivy()
-  const [showTransaction, setShowTransaction] = useState(false)
+  const { logout, authenticated, user, ready } = usePrivy()
+  const { login } = useLogin()
 
   useEffect(() => {
     if (authenticated && ready) {
-      // Show transaction component when authenticated
-      setShowTransaction(true)
+      // Redirect to dashboard when authenticated
+      router.push('/dashboard')
     }
-  }, [authenticated, ready])
+  }, [authenticated, ready, router])
 
   const handleConnect = async () => {
     try {
@@ -30,7 +29,6 @@ export function LandingPage() {
   const handleDisconnect = async () => {
     try {
       await logout()
-      setShowTransaction(false)
     } catch (error) {
       console.error('Logout failed:', error)
     }
@@ -98,27 +96,8 @@ export function LandingPage() {
         </div>
       </section>
 
-      {/* USDC Transaction Section */}
-      {showTransaction && (
-        <section className="container mx-auto px-4 py-12">
-          <div className="max-w-2xl mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-                Test Session Signer
-              </h2>
-              <p className="text-lg text-gray-600 dark:text-gray-300">
-                Create a session signer and test automatic USDC transactions with your embedded wallet
-              </p>
-            </div>
-            <USDCTransaction />
-            
-            {/* Automated Test Component */}
-            <div className="mt-8">
-              <AutomatedUSDCTest />
-            </div>
-          </div>
-        </section>
-      )}
+
+
 
       {/* How It Works */}
       <section className="container mx-auto px-4 py-20">
@@ -144,10 +123,10 @@ export function LandingPage() {
                 <Zap className="h-8 w-8 text-green-600" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                2. Auto-Stake Small %
+                2. Round-Up Calculation
               </h3>
               <p className="text-gray-600 dark:text-gray-300">
-                Using session signers, we automatically invest small amounts from your transactions into yield protocols - no manual approvals needed.
+                We calculate the round-up amount from your coffee purchases and show you exactly how much you can invest with one click.
               </p>
             </div>
             
@@ -156,10 +135,10 @@ export function LandingPage() {
                 <TrendingUp className="h-8 w-8 text-purple-600" />
               </div>
               <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-4">
-                3. Earn Passive Yield
+                3. Stake Your Coffee Change
               </h3>
               <p className="text-gray-600 dark:text-gray-300">
-                Your staked funds generate passive income through high-yield DeFi protocols.
+                With one click, approve and stake your round-up amounts to earn passive yield on your coffee spare change.
               </p>
             </div>
           </div>

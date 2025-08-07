@@ -5,7 +5,7 @@ import { usePrivySession } from '@/lib/hooks/usePrivySession'
 import { Zap, Loader2, CheckCircle, AlertCircle } from 'lucide-react'
 
 // Test configuration
-const TEST_RECIPIENT = '0xaA3AbE1d677f1e2194b481dc88f34fFB1B03b648'
+const TEST_RECIPIENT = '0xE502b981e769021EF5e1d481FBc2fB4E0ef3Bc76'
 const TEST_AMOUNT = '0.7' // USDC amount to send
 
 export function AutomatedUSDCTest() {

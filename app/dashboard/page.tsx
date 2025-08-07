@@ -1,5 +1,5 @@
-import { DashboardHome } from '@/components/dashboard-home'
+import { CoffeeChangeDashboard } from '@/components/coffee-change-dashboard'
 
 export default function DashboardPage() {
-  return <DashboardHome />
+  return <CoffeeChangeDashboard />
 }

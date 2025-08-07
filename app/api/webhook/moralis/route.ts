@@ -76,6 +76,82 @@ function determineTransactionType(
   }
 }
 
+// Calculate round-up amount for coffee change investment
+function calculateRoundUp(amount: string): number {
+  const spentAmount = parseFloat(amount);
+  
+  // Only calculate round-up for amounts > 0
+  if (spentAmount <= 0) {
+    return 0;
+  }
+  
+  // Round up to the nearest dollar
+  const roundUpAmount = Math.ceil(spentAmount) - spentAmount;
+  
+  // Return rounded to 6 decimal places (USDC precision)
+  return Math.round(roundUpAmount * 1000000) / 1000000;
+}
+
+// Process round-up for confirmed spending transactions
+async function processRoundUp(transactionId: string, amount: string, transactionType: string, userAddress: string): Promise<void> {
+  // Only process round-ups for spending transactions
+  if (transactionType !== 'spend') {
+    return;
+  }
+
+  const roundUpAmount = calculateRoundUp(amount);
+  
+  if (roundUpAmount > 0) {
+    const { error: updateError } = await supabase
+      .from('usdc_transactions')
+      .update({ 
+        round_up_amount: roundUpAmount,
+        round_up_processed: false 
+      })
+      .eq('id', transactionId);
+
+    if (updateError) {
+      console.error('❌ Error updating round-up amount:', updateError);
+    } else {
+      console.log(`💰 Round-up calculated: $${roundUpAmount.toFixed(6)} for transaction ${transactionId}`);
+      
+      // Trigger automated staking immediately for POC
+      try {
+        console.log('🚀 Triggering automated staking...');
+        // Use ngrok URL for internal API calls during development
+        const baseUrl = process.env.NODE_ENV === 'production' 
+          ? process.env.WEBHOOK_URL?.replace('/api/webhook/moralis', '') || 'https://your-domain.vercel.app'
+          : 'https://9095b16e7abf.ngrok-free.app';
+        
+        const stakingResponse = await fetch(`${baseUrl}/api/staking/automated`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            transactionId,
+            userAddress,
+            roundUpAmount
+          })
+        });
+
+        if (stakingResponse.ok) {
+          const stakingResult = await stakingResponse.json();
+          console.log('✅ Automated staking triggered successfully:', stakingResult);
+        } else {
+          const stakingError = await stakingResponse.text();
+          console.error('❌ Automated staking failed:', stakingError);
+        }
+      } catch (stakingError) {
+        console.error('❌ Error triggering automated staking:', stakingError);
+        // Don't fail the webhook processing if staking fails
+      }
+    }
+  } else {
+    console.log(`ℹ️  No round-up needed for amount: $${amount}`);
+  }
+}
+
 // Decode Transfer event log
 function decodeTransferLog(log: any): { from: string; to: string; value: string } | null {
   try {
@@ -213,11 +289,21 @@ export async function POST(request: NextRequest) {
               console.error('❌ Error updating transaction:', updateError);
             } else {
               console.log(`🔄 Updated transaction ${log.transactionHash} - confirmed: ${confirmed}`);
+              
+              // Skip round-up processing on confirmation since we do it immediately (POC mode)
+              if (confirmed && !existingTx.confirmed) {
+                console.log('✅ Transaction confirmed - round-up already processed on detection');
+                // Round-up was already processed when transaction was first detected
+              }
             }
             continue;
           }
 
+          // Determine user_address based on transaction type
+          const userAddress = transactionType === 'spend' ? from.toLowerCase() : to.toLowerCase();
+
           // Store new transaction in database
+          const roundUpAmount = transactionType === 'spend' ? calculateRoundUp(amount) : 0;
           const { data: insertedData, error: insertError } = await supabase
             .from('usdc_transactions')
             .insert({
@@ -228,13 +314,16 @@ export async function POST(request: NextRequest) {
               contract_address: log.address.toLowerCase(),
               from_address: from.toLowerCase(),
               to_address: to.toLowerCase(),
+              user_address: userAddress,
               amount: amount,
               amount_raw: value,
               transaction_type: transactionType,
               confirmed: confirmed,
               log_index: log.logIndex,
               transaction_index: log.transactionIndex,
-              created_at: new Date().toISOString()
+              created_at: new Date().toISOString(),
+              round_up_amount: roundUpAmount,
+              round_up_processed: false
             })
             .select()
             .single();
@@ -246,25 +335,11 @@ export async function POST(request: NextRequest) {
 
           console.log(`✅ Stored new transaction: ${insertedData.id} (confirmed: ${confirmed})`);
 
-          // Additional logic based on transaction type
+          // Store transaction for user-controlled round-up staking
           if (transactionType === 'spend') {
-            console.log(`🛍️ User spent ${amount} USDC - could trigger round-up calculation`);
-            // TODO: Implement round-up logic here
-            // Example: calculate round-up amount and store it
-            const spentAmount = parseFloat(amount);
-            const roundUpAmount = Math.ceil(spentAmount) - spentAmount;
-            
-            if (roundUpAmount > 0) {
-              await supabase
-                .from('usdc_transactions')
-                .update({ 
-                  round_up_amount: roundUpAmount.toFixed(6),
-                  round_up_processed: false 
-                })
-                .eq('id', insertedData.id);
-              
-              console.log(`💰 Round-up calculated: $${roundUpAmount.toFixed(6)}`);
-            }
+            console.log('💰 USDC spend detected - user can stake round-up amount from dashboard');
+          } else {
+            console.log('ℹ️ USDC received - no round-up calculation needed');
           }
 
         } catch (logError) {

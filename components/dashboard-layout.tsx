@@ -2,14 +2,41 @@
 
 import { useState } from 'react'
 import { Home, TrendingUp, ArrowLeftRight, BarChart3, LogOut, DollarSign } from 'lucide-react'
-import { ConnectButton } from '@rainbow-me/rainbowkit'
+import { usePrivy } from '@privy-io/react-auth'
 
 interface DashboardLayoutProps {
   children: React.ReactNode
-  currentPage: 'dashboard' | 'investments' | 'transactions' | 'analytics'
+  currentPage?: 'dashboard' | 'investments' | 'transactions' | 'analytics'
 }
 
-export function DashboardLayout({ children, currentPage }: DashboardLayoutProps) {
+function PrivyUserButton() {
+  const { user, logout } = usePrivy()
+  
+  return (
+    <div className="flex items-center gap-3">
+      <div className="text-right">
+        <p className="text-sm font-medium text-gray-900 dark:text-white">
+          {user?.email?.address || 'User'}
+        </p>
+        <p className="text-xs text-gray-500">
+          {user?.linkedAccounts?.[0]?.address ? 
+            `${user.linkedAccounts[0].address.slice(0, 6)}...${user.linkedAccounts[0].address.slice(-4)}` : 
+            'Connected'
+          }
+        </p>
+      </div>
+      <button
+        onClick={logout}
+        className="flex items-center gap-2 px-3 py-2 text-sm text-gray-600 hover:text-gray-900 dark:text-gray-300 dark:hover:text-white"
+      >
+        <LogOut className="h-4 w-4" />
+        Logout
+      </button>
+    </div>
+  )
+}
+
+export function DashboardLayout({ children, currentPage = 'dashboard' }: DashboardLayoutProps) {
   const navigation = [
     { name: 'Dashboard', href: '/dashboard', icon: Home, current: currentPage === 'dashboard' },
     { name: 'Investments', href: '/dashboard/investments', icon: TrendingUp, current: currentPage === 'investments' },
@@ -72,7 +99,7 @@ export function DashboardLayout({ children, currentPage }: DashboardLayoutProps)
               {currentPage}
             </h1>
             <div className="flex items-center space-x-4">
-              <ConnectButton />
+              <PrivyUserButton />
             </div>
           </div>
         </div>

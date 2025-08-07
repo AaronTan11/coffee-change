@@ -1,8 +1,8 @@
 'use client'
 import { useState, ChangeEvent } from 'react';
 import { DollarSign } from 'lucide-react';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
-import { useAccount, useBalance } from 'wagmi';
+import { usePrivy } from '@privy-io/react-auth';
+
 import Image from 'next/image';
 import { toast } from 'sonner';
 import swapUsdcToWeth from '../utils/UsdcSwapWeth';
@@ -11,10 +11,9 @@ import unwrapWeth from '../utils/UnwrapWeth';
 const SwapPage = () => {
   const [amount, setAmount] = useState<string>('');
   const [isLoading, setIsLoading] = useState<boolean>(false);
-  const { address, isConnected } = useAccount();
-  const { data: ethBalance } = useBalance({
-    address
-  });
+  const { user, authenticated } = usePrivy();
+  // TODO: Get balance from Privy wallet
+  const ethBalance = { formatted: '0' }; // Placeholder
 
   // Validate input to only allow numbers and decimals
   const handleAmountChange = (e: ChangeEvent<HTMLInputElement>) => {
@@ -79,7 +78,7 @@ const SwapPage = () => {
             <DollarSign className="h-8 w-8 text-blue-600" />
             <span className="text-2xl font-bold text-gray-900 dark:text-white">CoffeeChange</span>
           </div>
-          <ConnectButton />
+          <p className="text-gray-600">Please connect your wallet using Privy to continue.</p>
         </nav>
       </header>
 
@@ -138,7 +137,7 @@ const SwapPage = () => {
           </button>
 
           {/* Balance Display */}
-          {isConnected && ethBalance && (
+          {authenticated && ethBalance && (
             <div className="mt-6 p-4 bg-gray-50 dark:bg-gray-700 rounded-xl">
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium text-gray-600 dark:text-gray-300">Wallet ETH Balance</span>

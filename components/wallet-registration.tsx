@@ -1,13 +1,12 @@
 'use client';
 
 import { useState } from 'react';
-import { useAccount, useDisconnect } from 'wagmi';
-import { ConnectButton } from '@rainbow-me/rainbowkit';
+
+import { usePrivy } from '@privy-io/react-auth';
 import { useWalletRegistration } from '@/lib/hooks/useWalletRegistration';
 
 export function WalletRegistration() {
-  const { address, isConnected } = useAccount();
-  const { disconnect } = useDisconnect();
+  const { user, authenticated } = usePrivy();
   const {
     isRegistered,
     isLoading,
@@ -16,7 +15,7 @@ export function WalletRegistration() {
     error,
     registerWallet,
     checkWalletStatus,
-  } = useWalletRegistration();
+  } = useWalletRegistration(user?.linkedAccounts?.[0]?.address!);
 
   const [customLabel, setCustomLabel] = useState('');
   const [showLabelInput, setShowLabelInput] = useState(false);
@@ -28,7 +27,7 @@ export function WalletRegistration() {
     setShowLabelInput(false);
   };
 
-  if (!isConnected) {
+  if (!authenticated) {
     return (
       <div className="flex flex-col items-center space-y-4 p-6 bg-white rounded-lg shadow-md">
         <h2 className="text-xl font-semibold text-gray-800">
@@ -37,7 +36,7 @@ export function WalletRegistration() {
         <p className="text-gray-600 text-center">
           Connect your wallet to start monitoring your USDC transactions for coffee round-ups.
         </p>
-        <ConnectButton />
+        <p className="text-gray-600">Please connect your wallet using Privy to continue.</p>
       </div>
     );
   }
@@ -48,7 +47,7 @@ export function WalletRegistration() {
         <h2 className="text-xl font-semibold text-gray-800">
           Wallet Registration
         </h2>
-        <ConnectButton />
+        <p className="text-gray-600">Please connect your wallet using Privy to continue.</p>
       </div>
 
       {/* Wallet Address Display */}
