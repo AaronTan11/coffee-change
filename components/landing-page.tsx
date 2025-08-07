@@ -2,27 +2,39 @@
 
 import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import { useAccount } from 'wagmi'
+import { usePrivy } from '@privy-io/react-auth'
 import { Wallet, TrendingUp, Shield, Zap, DollarSign, BarChart3 } from 'lucide-react'
-import { ConnectButton } from '@rainbow-me/rainbowkit'
-import { WalletRegistration } from './wallet-registration'
-import { useWalletRegistration } from '@/lib/hooks/useWalletRegistration'
+import { USDCTransaction } from './usdc-transaction'
+import { AutomatedUSDCTest } from './automated-usdc-test'
 
 export function LandingPage() {
   const router = useRouter()
-  const { isConnected } = useAccount()
-  const { isRegistered, isLoading } = useWalletRegistration()
-  const [showRegistration, setShowRegistration] = useState(false)
+  const { login, logout, authenticated, user, ready } = usePrivy()
+  const [showTransaction, setShowTransaction] = useState(false)
 
   useEffect(() => {
-    if (isConnected && isRegistered && !isLoading) {
-      // Only redirect to dashboard if wallet is connected AND registered
-      router.push('/dashboard')
-    } else if (isConnected && !isLoading && !isRegistered) {
-      // Show registration component if connected but not registered
-      setShowRegistration(true)
+    if (authenticated && ready) {
+      // Show transaction component when authenticated
+      setShowTransaction(true)
     }
-  }, [isConnected, isRegistered, isLoading, router])
+  }, [authenticated, ready])
+
+  const handleConnect = async () => {
+    try {
+      await login()
+    } catch (error) {
+      console.error('Login failed:', error)
+    }
+  }
+
+  const handleDisconnect = async () => {
+    try {
+      await logout()
+      setShowTransaction(false)
+    } catch (error) {
+      console.error('Logout failed:', error)
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
@@ -33,7 +45,29 @@ export function LandingPage() {
             <DollarSign className="h-8 w-8 text-blue-600" />
             <span className="text-2xl font-bold text-gray-900 dark:text-white">CoffeeChange</span>
           </div>
-          <ConnectButton />
+          <div className="flex items-center space-x-4">
+            {authenticated ? (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-gray-600 dark:text-gray-300">
+                  {user?.wallet?.address?.slice(0, 6)}...{user?.wallet?.address?.slice(-4)}
+                </span>
+                <button
+                  onClick={handleDisconnect}
+                  className="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg text-sm transition-colors"
+                >
+                  Disconnect
+                </button>
+              </div>
+            ) : (
+              <button
+                onClick={handleConnect}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-semibold transition-colors flex items-center gap-2"
+              >
+                <Wallet className="h-4 w-4" />
+                Connect Wallet
+              </button>
+            )}
+          </div>
         </nav>
       </header>
 
@@ -44,51 +78,47 @@ export function LandingPage() {
             Turn Your <span className="text-blue-600">USDC Transactions</span> Into Passive Income
           </h1>
           <p className="text-xl text-gray-600 dark:text-gray-300 mb-8 max-w-3xl mx-auto">
-            Automatically earn yield from your everyday USDC activity. We take a small percentage of your transactions and stake them into high-yield protocols.
+            Automatically earn yield from your everyday USDC activity with embedded wallets and session signers. No manual approvals needed - just pure automation.
           </p>
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <ConnectButton.Custom>
-              {({ account, chain, openConnectModal, mounted }) => {
-                const ready = mounted
-                const connected = ready && account && chain
-
-                return (
-                  <div
-                    {...(!ready && {
-                      'aria-hidden': true,
-                      'style': {
-                        opacity: 0,
-                        pointerEvents: 'none',
-                        userSelect: 'none',
-                      },
-                    })}
-                  >
-                    {(() => {
-                      if (!connected) {
-                        return (
-                          <button
-                            onClick={openConnectModal}
-                            className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-colors flex items-center gap-2"
-                          >
-                            <Wallet className="h-5 w-5" />
-                            Connect Wallet & Start Earning
-                          </button>
-                        )
-                      }
-
-                      return (
-                        <div className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-6 py-3 rounded-lg font-semibold">
-                          ✅ Wallet Connected - Redirecting to dashboard...
-                        </div>
-                      )
-                    })()}
-                  </div>
-                )
-              }}
-            </ConnectButton.Custom>
+            {!authenticated ? (
+              <button
+                onClick={handleConnect}
+                className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-colors flex items-center gap-2"
+              >
+                <Wallet className="h-5 w-5" />
+                Create Embedded Wallet & Start Earning
+              </button>
+            ) : (
+              <div className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-6 py-3 rounded-lg font-semibold">
+                ✅ Wallet Connected - Ready to transact!
+              </div>
+            )}
           </div>
         </div>
       </section>
+
+      {/* USDC Transaction Section */}
+      {showTransaction && (
+        <section className="container mx-auto px-4 py-12">
+          <div className="max-w-2xl mx-auto">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+                Test Session Signer
+              </h2>
+              <p className="text-lg text-gray-600 dark:text-gray-300">
+                Create a session signer and test automatic USDC transactions with your embedded wallet
+              </p>
+            </div>
+            <USDCTransaction />
+            
+            {/* Automated Test Component */}
+            <div className="mt-8">
+              <AutomatedUSDCTest />
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* How It Works */}
       <section className="container mx-auto px-4 py-20">
@@ -117,7 +147,7 @@ export function LandingPage() {
                 2. Auto-Stake Small %
               </h3>
               <p className="text-gray-600 dark:text-gray-300">
-                When new transactions are detected, we automatically sum up all the small transactions and stake them into yield protocols.
+                Using session signers, we automatically invest small amounts from your transactions into yield protocols - no manual approvals needed.
               </p>
             </div>
             
@@ -170,7 +200,6 @@ export function LandingPage() {
                       </h3>
                       <p className="text-gray-600 dark:text-gray-300">
                       Start building wealth with just 1% of your transactions. No minimum amounts, no complex decisions - just automatic wealth accumulation from your daily activities.
-
                       </p>
                     </div>
                   </div>
@@ -217,66 +246,21 @@ export function LandingPage() {
           <p className="text-xl text-gray-600 dark:text-gray-300 mb-8">
             Join thousands of users who are already earning passive income from their everyday USDC activity.
           </p>
-          <ConnectButton.Custom>
-            {({ account, chain, openConnectModal, mounted }) => {
-              const ready = mounted
-              const connected = ready && account && chain
-
-              return (
-                <div
-                  {...(!ready && {
-                    'aria-hidden': true,
-                    'style': {
-                      opacity: 0,
-                      pointerEvents: 'none',
-                      userSelect: 'none',
-                    },
-                  })}
-                >
-                  {(() => {
-                    if (!connected) {
-                      return (
-                        <button
-                          onClick={openConnectModal}
-                          className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-colors inline-flex items-center gap-2"
-                        >
-                          <Wallet className="h-5 w-5" />
-                          Connect Wallet Now
-                        </button>
-                      )
-                    }
-
-                    return (
-                      <div className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-6 py-3 rounded-lg font-semibold inline-block">
-                        ✅ Connected! Redirecting to your dashboard...
-                      </div>
-                    )
-                  })()}
-                </div>
-              )
-            }}
-          </ConnectButton.Custom>
+          {!authenticated ? (
+            <button
+              onClick={handleConnect}
+              className="bg-blue-600 hover:bg-blue-700 text-white px-8 py-4 rounded-lg font-semibold text-lg transition-colors inline-flex items-center gap-2"
+            >
+              <Wallet className="h-5 w-5" />
+              Connect Wallet Now
+            </button>
+          ) : (
+            <div className="bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200 px-6 py-3 rounded-lg font-semibold inline-block">
+              ✅ Connected! Ready to transact!
+            </div>
+          )}
         </div>
       </section>
-
-
-
-      {/* Wallet Registration Section */}
-      {showRegistration && (
-        <section className="container mx-auto px-4 py-12">
-          <div className="max-w-2xl mx-auto">
-            <div className="text-center mb-8">
-              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
-                Complete Your Setup
-              </h2>
-              <p className="text-lg text-gray-600 dark:text-gray-300">
-                Register your wallet to start monitoring USDC transactions for automatic round-ups.
-              </p>
-            </div>
-            <WalletRegistration />
-          </div>
-        </section>
-      )}
 
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
