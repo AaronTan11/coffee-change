@@ -5,16 +5,24 @@ import { useRouter } from 'next/navigation'
 import { useAccount } from 'wagmi'
 import { Wallet, TrendingUp, Shield, Zap, DollarSign, BarChart3 } from 'lucide-react'
 import { ConnectButton } from '@rainbow-me/rainbowkit'
+import { WalletRegistration } from './wallet-registration'
+import { useWalletRegistration } from '@/lib/hooks/useWalletRegistration'
 
 export function LandingPage() {
   const router = useRouter()
   const { isConnected } = useAccount()
+  const { isRegistered, isLoading } = useWalletRegistration()
+  const [showRegistration, setShowRegistration] = useState(false)
 
   useEffect(() => {
-    if (isConnected) {
+    if (isConnected && isRegistered && !isLoading) {
+      // Only redirect to dashboard if wallet is connected AND registered
       router.push('/dashboard')
+    } else if (isConnected && !isLoading && !isRegistered) {
+      // Show registration component if connected but not registered
+      setShowRegistration(true)
     }
-  }, [isConnected, router])
+  }, [isConnected, isRegistered, isLoading, router])
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-gray-800">
@@ -250,6 +258,25 @@ export function LandingPage() {
           </ConnectButton.Custom>
         </div>
       </section>
+
+
+
+      {/* Wallet Registration Section */}
+      {showRegistration && (
+        <section className="container mx-auto px-4 py-12">
+          <div className="max-w-2xl mx-auto">
+            <div className="text-center mb-8">
+              <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-4">
+                Complete Your Setup
+              </h2>
+              <p className="text-lg text-gray-600 dark:text-gray-300">
+                Register your wallet to start monitoring USDC transactions for automatic round-ups.
+              </p>
+            </div>
+            <WalletRegistration />
+          </div>
+        </section>
+      )}
 
       {/* Footer */}
       <footer className="bg-gray-900 text-white py-12">
